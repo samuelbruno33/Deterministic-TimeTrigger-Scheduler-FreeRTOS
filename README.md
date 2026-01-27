@@ -1,0 +1,2 @@
+# DeterministicTimeTriggerSchedulerFreeRTOS
+ This project implements a deterministic, time-triggered scheduler for FreeRTOS, designed to replace the default priority-based scheduler with a static timeline-driven execution model. Instead of relying on dynamic priorities and runtime decisions, tasks are executed at predefined instants within a repeating major frame, ensuring predictable timing, bounded jitter, and full repeatability across cycles.
