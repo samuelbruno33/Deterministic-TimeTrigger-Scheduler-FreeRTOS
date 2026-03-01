@@ -23,7 +23,7 @@ typedef enum trace_event {
     TRACE_HRT_ABORTED,
     TASK_NOTIFY_WAIT,
     TIMEKEEPER_RESET,
-    MAJOR_FRAME_RESTART,
+    xMajorFrameRestart,
     TRACE_SRT_SELECTED, /* Triggered when a specific SRT task is selected by the scheduler */
     TRACE_SRT_COMPLETED,
     TRACE_SRT_READY,
@@ -37,7 +37,11 @@ typedef enum trace_event {
     TRACE_HRT_COMPLETED,
     TRACE_HRT_RUNNING,
     TRACE_HRT_READY,
-    CPU_IDLE      /* Triggered when there is a gap in the timeline (no HRT task) */
+    CPU_IDLE,      /* Triggered when there is a gap in the timeline (no HRT task) */
+    ulCurrentSubframe,
+    TRACE_CPU_UTILIZATION,
+    TRACE_HRT_OVERLAP,
+    TRACE_NO_TASKS
 } trace_event_t;
 
 char* convertEventToString(unsigned short int event);
@@ -55,6 +59,20 @@ void trace_task_delay_until(uint32_t xTimeToWake);
 void trace_task_resume(void* pxTaskToResume);
 void trace_task_resume_from_isr(void* pxTaskToResume);
 void trace_task_notify_wait(uint32_t uxIndexToWaitOn);
+
+void trace_SRT_task_completed(char* pcTaskName);
+void trace_SRT_task_ready(char* pcTaskName);
+void trace_SRT_task_preempted(char* pcTaskName);
+void trace_SRT_task_resumed(char* pcTaskName);
+void trace_SRT_task_running(char* pcTaskName);
+void trace_HRT_task_completed(char* pcTaskName);
+void trace_HRT_task_ready(char* pcTaskName);
+void trace_HRT_task_aborted(char* pcTaskName);
+void trace_HRT_task_running(char* pcTaskName);
+void trace_IDLE_task();
+void trace_cpu_utilization(uint32_t utilization);
+void trace_hrt_overlap();
+void trace_no_tasks();
 
 void trace_event_put(uint32_t event_id, void* event_data);
 

@@ -1,5 +1,4 @@
 #include "timekeeper.h"
-#include <timeline_scheduler.h>
 #include "FreeRTOS.h"
 #include "task.h"
 #include <emulated_uart.h>
@@ -12,7 +11,9 @@
  * This function is automatically invoked by the FreeRTOS kernel
  * at every system tick interrupt.
  */
+
 void vApplicationTickHook(void){
+#if (configUSE_TIMELINE_SCHEDULER == 1)
 
     uint32_t now = xTaskGetTickCount();
 
@@ -21,9 +22,9 @@ void vApplicationTickHook(void){
 
     // Detect the restart of the Major Frame.
     if (vTimekeeperMajorFrameRestart()) {
+        /* Calculate and print CPU Utilization, then reset the counter */
+        vCalculateAndResetCPUUtilization();
 	    vResetTimelineFrame();
-        trace_rtos_event(TIMEKEEPER_RESET, "TIMEKEEPER RESET", NULL, NULL);
     }
+#endif
 }
-                
-                

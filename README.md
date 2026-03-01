@@ -1,6 +1,7 @@
-## Group 47
+# Deterministic Timeline-Based Scheduler for FreeRTOS - Group 47
 
-Operating Systems for Embedded Systems Project 2025/26.
+
+Operating Systems for Embedded Systems Project 2025/26 at Politecnico di Torino.
 
 ## Description
 This project implements a deterministic, time-triggered scheduler for FreeRTOS, designed to replace the default priority-based scheduler with a **static timeline-driven execution model**.
@@ -23,7 +24,4 @@ This is a **university project**, and contributions are currently limited in sco
 |Lorenzo Deplano|361511|
 |Elsa Francesca Ionita|361804|
 
-## Project status
-In Development
-
-For more information about the project consult the full [Development Roadmap](./Instruction.md)
+For more information about the project consult the full [Development Roadmap](./Implementation.md)

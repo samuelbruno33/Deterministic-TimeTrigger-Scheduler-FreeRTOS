@@ -10,7 +10,7 @@ static const SubFrame_t subframes[] = {
 };
 
 static const TimekeeperConfig_t tk_cfg = { 
-    .major_frame_ticks = 20, .num_subframes = 2, .subframes = subframes
+    .ulMajorFrameTicks = 20, .ulNumSubframes = 2, .subframes = subframes
 };
 
 void vTask(void *pvParameters){

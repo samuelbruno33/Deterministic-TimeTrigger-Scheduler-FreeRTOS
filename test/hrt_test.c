@@ -37,7 +37,7 @@ void vHrtWorkloadTask(void *pvParams) {
         /*Here we simulate a computational workload */
         for(volatile int i = 0; i < 20000; i++);
 
-        vNotifyTaskCompletion(xHandle);
+        vNotifyHRTCompletion(xHandle);
     }
 }
 
@@ -69,8 +69,8 @@ int main(void) {
     /* Configuration for the Timekeeper */
     /* We need to say to the Timekeeper how much a frame lasts */
     TimekeeperConfig_t xTkConfig = {
-        .major_frame_ticks = 50,
-        .num_subframes = 5,     
+        .ulMajorFrameTicks = 50,
+        .ulNumSubframes = 5,     
         .subframes = xSF
     };
 

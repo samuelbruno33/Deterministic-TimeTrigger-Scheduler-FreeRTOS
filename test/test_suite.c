@@ -25,7 +25,6 @@ Test_t tests[] = {
     // {"Test 1 - test_DataStructures", test_DataStructures},
     // {"Test 2 - test_Timekeeper", test_Timekeeper},
     {"Test 3 - test_HRT", test_HRT},
-    //{"Test 4 - test_SRT_HRT", test_HRT},
 };
 
 #define NUM_TESTS (sizeof(tests) / sizeof(tests[0]))
@@ -72,8 +71,8 @@ void test_HRT(void)
         {"HRT_B", vHrtTaskCode, "B", 128, TIMELINE_TASK_HRT, 30, 40, 0}};
     
     TimekeeperConfig_t xTkConfig = {
-    .major_frame_ticks = 50,
-    .num_subframes = 0, // 0 because we don't use it
+    .ulMajorFrameTicks = 50,
+    .ulNumSubframes = 0, // 0 because we don't use it
     .subframes = NULL};
 
     SchedulerConfig_t xConfig = {
@@ -113,7 +112,7 @@ void test_Timekeeper(void)
         {.start_tick = 0, .end_tick = 10}, {.start_tick = 10, .end_tick = 20}};
 
     static const TimekeeperConfig_t tk_cfg = {
-        .major_frame_ticks = 50, .num_subframes = 2, .subframes = subframes};
+        .ulMajorFrameTicks = 50, .ulNumSubframes = 2, .subframes = subframes};
 
     vTimekeeperInit(&tk_cfg);
 

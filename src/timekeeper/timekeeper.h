@@ -3,16 +3,12 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include "FreeRTOSConfig.h"
+
 
 typedef struct {
-    uint32_t start_tick;
-    uint32_t end_tick;
-} SubFrame_t;
-
-typedef struct {
-    uint32_t major_frame_ticks;
-    uint32_t num_subframes;
-    const SubFrame_t *subframes;
+    uint32_t ulMajorFrameTicks;
+    uint32_t ulNumSubframes;
 } TimekeeperConfig_t;
 
 void vTimekeeperInit(const TimekeeperConfig_t *cfg);
@@ -20,7 +16,7 @@ void vTimekeeperUpdate(void);
 bool vTimekeeperMajorFrameRestart(void);
 uint32_t vTimekeeperGetCurrentSubframe(void);
 uint32_t vTimekeeperGetCurrentTickInMF(void);
-
+uint32_t vTimekeeperGetRelativeSFTick(void);
 
 #endif
 

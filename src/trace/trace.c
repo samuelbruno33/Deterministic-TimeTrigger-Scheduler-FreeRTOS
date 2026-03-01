@@ -202,7 +202,7 @@ void trace_rtos_event_old(trace_event_t event_id, uintptr_t data)
         strcat_light(buffer, "'");
         break;
 
-    case MAJOR_FRAME_RESTART:
+    case xMajorFrameRestart:
         strcat_light(buffer, "MAJOR FRAME RESTART - All tasks reset to READY");
         break;
     case TRACE_SRT_SELECTED:
@@ -301,14 +301,37 @@ void trace_rtos_event(trace_event_t event_type, char* event_name, const char* ta
         }
         break;
 
-    case MAJOR_FRAME_RESTART:
+    case xMajorFrameRestart:
         strcat_light(buffer, "MAJOR FRAME RESTART - All tasks reset to READY");
         break;
     
     case CPU_IDLE:
         strcat_light(buffer, "CPU IDLE (Timeline Gap)");
         break;
+    
+    case ulCurrentSubframe:
+        strcat_light(buffer, "CURRENT SUBFRAME ");
+        uint32_t ulCurrentSubframe = (uint32_t)data;
+        char num[4];
+        utoa(ulCurrentSubframe, num, 10);
+        strcat_light(buffer, num);
+        break;
 
+    case TRACE_CPU_UTILIZATION:
+        strcat_light(buffer, "CPU UTILIZATION: ");
+        // Convert the utilization number to string
+        utoa((uint32_t)data, num_buffer, 10); 
+        strcat_light(buffer, num_buffer);
+        strcat_light(buffer, "%");
+        break;
+    
+    case TRACE_HRT_OVERLAP:
+        strcat_light(buffer, "ERROR: Hard Real-Time task overlap found in configured tasks layout");
+        break;    
+    
+    case TRACE_NO_TASKS:
+        strcat_light(buffer, "ERROR: No Tasks configured to be scheduled");
+        break;
     default:
         strcat_light(buffer, event_name);
 
@@ -328,24 +351,24 @@ void trace_rtos_event(trace_event_t event_type, char* event_name, const char* ta
 
 void trace_task_switched_in(void)
 {
-    trace_rtos_event(TASK_SWITCH_IN, "TASK_SWITCH_IN", NULL,(uintptr_t)pxCurrentTCB);
+    trace_rtos_event(TASK_SWITCH_IN, "TASK_SWITCH_IN", NULL, pxCurrentTCB);
 }
 
 void trace_task_switched_out(void)
 {
-    trace_rtos_event(TASK_SWITCH_OUT, "TASK_SWITCH_OUT", NULL,(uintptr_t)pxCurrentTCB);
+    trace_rtos_event(TASK_SWITCH_OUT, "TASK_SWITCH_OUT", NULL, pxCurrentTCB);
 }
 
 void trace_task_create(void *pxNewTCB)
 {
-    trace_rtos_event(TASK_CREATE, "TASK CREATE", NULL, (uintptr_t)pxNewTCB);
+    trace_rtos_event(TASK_CREATE, "TASK CREATE", NULL, pxNewTCB);
 }
 
 void trace_task_delete(void *pxTaskToDelete){}
 
 void trace_task_increment_tick(uint32_t xTickCount)
 {
-    // trace_rtos_event(TASK_INCREMENT_TICK, &xTickCount); //TODO Valutare se tenerlo
+    // trace_rtos_event(TASK_INCREMENT_TICK, &xTickCount);
 }
 
 void trace_SRT_task_completed(char* pcTaskName)
@@ -398,6 +421,28 @@ void trace_IDLE_task()
     trace_rtos_event(CPU_IDLE, "CPU_IDLE", "IDLE", NULL);
 }
 
+/*
+void trace_ulCurrentSubframe(uint32_t ulCurrentSubframe)
+{
+    trace_rtos_event(ulCurrentSubframe, "ulCurrentSubframe", NULL, ulCurrentSubframe);
+}
+*/
+
+void trace_cpu_utilization(uint32_t utilization)
+{
+    trace_rtos_event(TRACE_CPU_UTILIZATION, "CPU_UTILIZATION", NULL, (void*)utilization);
+}
+
+void trace_hrt_overlap(void)
+{
+    trace_rtos_event(TRACE_HRT_OVERLAP, "HRT_OVERLAP", NULL, NULL);
+}
+
+void trace_no_tasks(void)
+{
+    trace_rtos_event(TRACE_NO_TASKS, "NO_TASKS", NULL, NULL);
+}
+
 
 char *convertEventToString(unsigned short int event)
 {
@@ -432,7 +477,7 @@ char *convertEventToString(unsigned short int event)
     case TRACE_HRT_ABORTED:
         out_str = "HRT Aborted";
         break;
-    case MAJOR_FRAME_RESTART:
+    case xMajorFrameRestart:
         out_str = "MAJOR FRAME RESET";
         break;
     case TIMEKEEPER_RESET:

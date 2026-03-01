@@ -1,12 +1,11 @@
 # Test Journey
 
 Todo list of the tests
-- [x] Phase 0
-- [x] Phase 1
-- [x] Phase 2
-- [x] Phase 3
-- [ ] Phase 4
-- [ ] Phase 5
+- [x] First test of the system
+- [x] Data Structures and Logic
+- [x] Timekeeper
+- [x] Hard-Real Time
+- [x] Soft-Real Time
 
 ## Instruction
 
@@ -107,4 +106,30 @@ The expected behavior is a deterministic repeating pattern in the trace, where t
 [30] HRT SELECTED - Task: 'HRT_B' 
 [40] CPU IDLE (Timeline Gap) 
 [50] TIMEKEEPER MAJOR FRAME RESET
+``` 
+
+## Phase 4: Soft Real-Time Scheduling
+
+To validate the integration of background tasks within the deterministic timeline, the file `srt_test.c` was created. This test verifies that Soft Real-Time (SRT) tasks can utilize the CPU during the idle gaps left by Hard Real-Time tasks without violating strict timing constraints.
+
+The test configures:
+
+* a **Major Frame of 100 FreeRTOS ticks**, divided into 10 sub-frames (10 ticks each);
+* multiple **HRT tasks** (`HRT_A`, `HRT_B`, `HRT_C`, `HRT_D`) scheduled in specific sub-frames and relative ticks, intentionally leaving wide temporal gaps;
+* two **SRT tasks** (`SRT_X`, `SRT_Y`) that perform a busy-wait workload.
+
+The purpose of this test is to confirm that:
+
+* SRT tasks correctly run in the background when no HRT task is ready;
+* An incoming HRT task successfully preempts a running SRT task the moment its start tick arrives;
+* A preempted SRT task correctly resumes its execution exactly where it left off once the HRT task completes or its slot ends;
+* When an SRT task completes its workload for the frame and calls `vNotifySrtCompletion()`, the scheduler deterministically switches to the next ready SRT task in the list.
+
+The expected behavior is a trace output showing the strict temporal enforcement of HRT tasks interspersed with the continuous, preemptable execution of SRT tasks:
+
+```
+HRT_A (Sub-frame 0, Start 1, End 4)
+HRT_B (Sub-frame 0, Start 6, End 9)
+HRT_C (Sub-frame 2, Start 0, End 3)
+HRT_D (Sub-frame 3, Start 1, End 4)
 ```

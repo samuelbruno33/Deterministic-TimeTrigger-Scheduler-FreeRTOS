@@ -1,6 +1,6 @@
 #include "FreeRTOS.h"
 #include "task.h"
-// #include "trace.h"
+#include "emulated_uart.h"
 
 #define mainTASK_PRIORITY ( tskIDLE_PRIORITY + 2 )
 
@@ -59,7 +59,7 @@ int main(int argc, char **argv){
 	(void) argc;
 	(void) argv;
 
-    trace_init();
+    UART_init();
 
     xTaskCreate(vTaskA, "TaskA", configMINIMAL_STACK_SIZE, NULL, mainTASK_PRIORITY + 2, NULL);
     xTaskCreate(vTaskB, "TaskB", configMINIMAL_STACK_SIZE, NULL, mainTASK_PRIORITY + 1, NULL);

@@ -36,7 +36,7 @@ INCLUDE_DIRS += -I$(DEMO_PROJECT)
 INCLUDE_DIRS += -I$(SOURCE_ROOT)
 INCLUDE_DIRS += -I$(SOURCE_ROOT)/trace
 INCLUDE_DIRS += -I$(SOURCE_ROOT)/timekeeper
-INCLUDE_DIRS += -I$(SOURCE_ROOT)/data_structure
+INCLUDE_DIRS += -I$(SOURCE_ROOT)/scheduler
 
 
 VPATH += $(KERNEL_DIR) $(KERNEL_PORT_DIR) $(KERNEL_DIR)/portable/MemMang
@@ -45,7 +45,7 @@ VPATH += $(SOURCE_ROOT)
 VPATH += $(SOURCE_ROOT)/trace
 VPATH += $(SOURCE_ROOT)/timekeeper
 VPATH += $(BOARD_ROOT)
-VPATH += $(SOURCE_ROOT)/data_structure
+VPATH += $(SOURCE_ROOT)/scheduler
 
 # Include paths. See INCLUDE_DIRS
 CFLAGS = $(INCLUDE_DIRS)
@@ -116,11 +116,11 @@ SOURCE_FILES += $(SOURCE_ROOT)/trace/emulated_uart.c
 SOURCE_FILES += $(SOURCE_ROOT)/trace/trace.c
 
 # Data Structures files (comment this line when executing data structure demo test, since we need the declaration of the c files in the test file)
-SOURCE_FILES += $(SOURCE_ROOT)/data_structure/timeline_scheduler.c
+SOURCE_FILES += $(SOURCE_ROOT)/scheduler/timeline_scheduler.c
 
 # Scheduler files
 SOURCE_FILES += $(SOURCE_ROOT)/timekeeper/timekeeper.c
-SOURCE_FILES += $(SOURCE_ROOT)/timekeeper/timekeeper_tunnel.c
+SOURCE_FILES += $(SOURCE_ROOT)/timekeeper/timekeeper_hook.c
 
 # Test files
 # SOURCE_FILES += $(DEMO_PROJECT)/test_trace_main.c
@@ -129,8 +129,8 @@ SOURCE_FILES += $(SOURCE_ROOT)/timekeeper/timekeeper_tunnel.c
 # SOURCE_FILES += $(DEMO_PROJECT)/hrt_test.c
 # SOURCE_FILES += $(DEMO_PROJECT)/test_suite.c
 # SOURCE_FILES += $(DEMO_PROJECT)/test_kill_policies.c
-SOURCE_FILES += $(DEMO_PROJECT)/srt_test.c
-# SOURCE_FILES += $(DEMO_PROJECT)/test_suite.c
+# SOURCE_FILES += $(DEMO_PROJECT)/srt_test.c
+SOURCE_FILES += $(DEMO_PROJECT)/test_main.c
 
 # Startup code
 SOURCE_FILES += $(BOARD_ROOT)/startup.c
@@ -162,7 +162,7 @@ cleanobj:
 	rm -f $(OUTPUT_DIR)/*.o
 
 clean:
-	rm -rf $(ELF) $(MAP) $(OUTPUT_DIR)/*.o $(OUTPUT_DIR)
+	rm -rf $(ELF) $(MAP) $(OUTPUT_DIR)/*.o $(OUTPUT_DIR) test/test_logs/ test/__pycache__/
 
 qemu_start:
 	qemu-system-arm -machine $(MACHINE) -cpu $(CPU) -kernel \
@@ -173,3 +173,6 @@ qemu_debug:
 	$(ELF) -monitor none -nographic -serial stdio $(QEMU_FLAGS_DBG)
 gdb_start:
 	gdb-multiarch $(ELF)
+
+tests:
+	$(MAKE) all

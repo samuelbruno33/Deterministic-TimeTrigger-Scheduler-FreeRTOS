@@ -73,7 +73,6 @@ typedef enum {
     /*Current execution state*/
     SRTStatus_t eStatus;
 
-    // @todo: Priority Order
  } SRTEntry_t;
 
 
@@ -160,9 +159,7 @@ typedef struct{
 /** Global Configuration of the Scheduler **/
 
 typedef struct{
-    TimekeeperConfig_t xTimekeeperConfig;
-
-    uint32_t ulMajorFrameTicks;
+    TimekeeperConfig_t* xTimekeeperConfig;
 
     /* Pointer to the array of Tasks configurations */
     TimelineTaskConfig_t* pxTasks;
@@ -198,7 +195,7 @@ TaskHandle_t xTimelineGetScheduledTask(void);
  * Updates the task status to COMPLETED and suspends the task to prevent re-runs.
  * @param xTask Handle of the completing task (use NULL for the calling task).
  */
-void vNotifyTaskCompletion(TaskHandle_t xTask);
+void vNotifyHRTCompletion(HRTEntry_t* xTask);
 
 /**
  * @brief Frame Management API - Resets all HRT tasks at the end of a Major Frame.
@@ -216,9 +213,11 @@ HRTEntry_t* xTimelineGetReadyHRTTask(void);
 
 HRTEntry_t* xTimelineGetRunningHRTTask(void);
 
-
 void dump_HRT_task_list(TimelineControlBlock_t *timeLine);
 
 void vNotifySrtCompletion(void);
+
+extern volatile uint32_t ulIdleTicksCount;
+void vCalculateAndResetCPUUtilization(void);
 
 #endif /* TIMELINE_SCHEDULER_H */

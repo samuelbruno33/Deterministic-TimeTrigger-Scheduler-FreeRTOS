@@ -136,6 +136,7 @@
 
 #define configENABLE_BACKWARD_COMPATIBILITY 0
 
+#if (configUSE_TIMELINE_SCHEDULER == 1)
 #define traceTASK_SWITCHED_IN()  trace_task_switched_in()
 #define traceTASK_SWITCHED_OUT() trace_task_switched_out()
 #define traceQUEUE_SEND(pxQueue)  trace_queue_send(pxQueue)
@@ -143,7 +144,7 @@
 #define traceTASK_CREATE(pxNewTCB) trace_task_create(pxNewTCB)
 #define traceTASK_INCREMENT_TICK( xTickCount ) trace_task_increment_tick(xTickCount)
 #define traceTASK_DELETE( pxTaskToDelete ) trace_task_delete(pxTaskToDelete)
-
+#endif
 
 /* CUSTOM TRACE MACROS*/
 #define traceTASK_SRT_READY(pcTaskName) trace_SRT_task_ready(pcTaskName)
@@ -157,7 +158,9 @@
 #define traceTASK_HRT_COMPLETED(pcTaskName) trace_HRT_task_completed(pcTaskName)
 #define traceTASK_HRT_RUNNING(pcTaskName) trace_HRT_task_running(pcTaskName)
 #define traceTASK_IDLE() trace_IDLE_task()
-
+#define traceulCurrentSubframe(ulCurrentSubframe) trace_ulCurrentSubframe(ulCurrentSubframe)
+#define traceSCHEDULER_HRT_OVERLAP() trace_hrt_overlap()
+#define traceSCHEDULER_NO_CONFIGURED_TASKS() trace_no_tasks()
 
 
 #endif /* FREERTOS_CONFIG_H */

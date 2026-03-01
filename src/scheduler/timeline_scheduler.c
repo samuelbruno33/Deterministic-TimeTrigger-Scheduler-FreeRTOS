@@ -12,9 +12,13 @@
 
  #include <string.h>
 
+ #include "emulated_uart.h" /* Required to print the CPU utilization */
+
 /* Static Instance initialized to zero */
 static TimelineControlBlock_t xTimeline = {0};
 
+/* Global counter for CPU Idle ticks within a Major Frame */
+volatile uint32_t ulIdleTicksCount = 0;
 
 /* Public Global Flag Implementation */
 BaseType_t xIsTimelineSchedulerActive = pdFALSE;
@@ -61,13 +65,15 @@ void vConfigureScheduler(SchedulerConfig_t *pxCfg){
     if((pxCfg == NULL) || (pxCfg->pxTasks == NULL) || (pxCfg->ulNumTasks == 0)){
         
         /* pdFALSE: Invalid Configuration */
+        traceSCHEDULER_NO_CONFIGURED_TASKS();
         configASSERT(pdFALSE);
         return;
     }
     xIsTimelineSchedulerActive = pdTRUE;
 
     /* Store Global Config */
-    xTimeline.ulMajorFrameTicks = pxCfg->ulMajorFrameTicks;
+    
+    xTimeline.ulMajorFrameTicks = pxCfg->xTimekeeperConfig->ulMajorFrameTicks;
     xTimeline.ulCurrentFrameTick = 0;
 
     /* Counting of HRT and SRT Tasks to allocate memory */
@@ -165,8 +171,9 @@ void vConfigureScheduler(SchedulerConfig_t *pxCfg){
         /* --- Overlap Check --- */
         for (uint32_t i = 0; i < xTimeline.ulHrtCount - 1; i++) {
             // If end of current task > start of the next task -> Error!
-            if (xTimeline.pxHrtTable[i].ulEndTick > xTimeline.pxHrtTable[i+1].ulStartTick) {
+            if ((xTimeline.pxHrtTable[i].ulEndTick > xTimeline.pxHrtTable[i+1].ulStartTick) && (xTimeline.pxHrtTable[i].ulSubFrameId == xTimeline.pxHrtTable[i+1].ulSubFrameId)) {
                 // Overlap found!
+                traceSCHEDULER_HRT_OVERLAP();
                 configASSERT(pdFALSE); 
             }
         }
@@ -181,7 +188,7 @@ TaskHandle_t xTimelineGetScheduledTask(void){
     if (xIsTimelineSchedulerActive == pdFALSE) return NULL;
 
     uint32_t ulCurrentSubFrame = vTimekeeperGetCurrentSubframe();
-    uint32_t ulRelTick = vTimekeeperGetCurrentTickInMF();
+    uint32_t ulRelTick = vTimekeeperGetRelativeSFTick();
 
     for(uint32_t i = 0; i < xTimeline.ulHrtCount; i++){
         HRTEntry_t *pxEntry = &xTimeline.pxHrtTable[i];
@@ -193,9 +200,6 @@ TaskHandle_t xTimelineGetScheduledTask(void){
                     return NULL;
                 }
 
-                /*if(ulRelTick == pxEntry->ulStartTick){
-                    trace_rtos_event(HRT_RELEASE, pxEntry->xTaskHandle.pcTaskName);
-                }*/
                 return pxEntry->xTaskHandle;
             }
         }
@@ -206,8 +210,7 @@ TaskHandle_t xTimelineGetScheduledTask(void){
 HRTEntry_t* xTimelineGetReadyHRTTask(void){
 
     uint32_t ulCurrentSubFrame = vTimekeeperGetCurrentSubframe();
-    uint32_t ulRelTick = vTimekeeperGetCurrentTickInMF();
-    //UART_printf("Ready HRT Task? ");
+    uint32_t ulRelTick = vTimekeeperGetRelativeSFTick();
 
     for(uint32_t i = 0; i < xTimeline.ulHrtCount; i++){
         HRTEntry_t *pxEntry = &xTimeline.pxHrtTable[i];
@@ -218,12 +221,9 @@ HRTEntry_t* xTimelineGetReadyHRTTask(void){
                 if(pxEntry->eStatus == HRT_COMPLETED || pxEntry->eStatus == HRT_ABORTED){
                     return NULL;
                 }
-                //UART_printf("Ready task found\n");
+
                 pxEntry-> eStatus = HRT_READY;
 
-                /*if(ulRelTick == pxEntry->ulStartTick){
-                    trace_rtos_event(HRT_RELEASE, pxEntry->xTaskHandle.pcTaskName);
-                }*/
                 return pxEntry;
             }
         }
@@ -256,16 +256,11 @@ SRTEntry_t* xTimelineGetRunningSRTTask(void){
     return NULL;
 }
  
-void vNotifyTaskCompletion(TaskHandle_t xTask){
-    if(xTask == NULL) xTask = xTaskGetCurrentTaskHandle();
+void vNotifyHRTCompletion(HRTEntry_t* xTask){
+    if(xTask == NULL) xTask = xTimelineGetRunningHRTTask();;
 
-    for(uint32_t i = 0; i < xTimeline.ulHrtCount; i++){
-        if(xTimeline.pxHrtTable[i].xTaskHandle == xTask){
-	        xTimeline.pxHrtTable[i].eStatus = HRT_COMPLETED;
-            vTaskSuspend(xTask);
-	        break;
-	    }
-    }
+	xTask->eStatus = HRT_COMPLETED;
+    portYIELD();
 }
 
 void vResetTimelineFrame(){
@@ -285,14 +280,14 @@ void vResetTimelineFrame(){
 	}
     
 
-    trace_rtos_event(MAJOR_FRAME_RESTART, "MAJOR FRAME RESTART", NULL, NULL);
+    trace_rtos_event(xMajorFrameRestart, "MAJOR FRAME RESTART", NULL, NULL);
 }
 
 BaseType_t xCheckHRTDeadline(HRTEntry_t* xCurrentTask)
 {
     //uint32_t now = xTaskGetTickCount();
-    uint32_t ulRelTick = vTimekeeperGetCurrentTickInMF();
-    if(ulRelTick < xCurrentTask->ulStartTick || ulRelTick > xCurrentTask->ulEndTick)
+    uint32_t ulRelTick = vTimekeeperGetRelativeSFTick();
+    if(ulRelTick < xCurrentTask->ulStartTick || ulRelTick >= xCurrentTask->ulEndTick)
     {
         xCurrentTask->eStatus = HRT_ABORTED;
         return pdTRUE;
@@ -368,9 +363,16 @@ BaseType_t xIsSwitchRequired(void)
         /* An HRT task is scheduled for this slot */
         return pdTRUE;
     }
-    
-    if(xCompletedSRTTask != NULL)
-    {
+
+    //Check if an SRT is RUNNING
+    if(xRunningSRTTask != NULL)
+    {   //No Switch needed
+        return pdFALSE;
+    }
+
+    //Check if an SRT is READY
+    if(xReadySRTTask != NULL)
+    {   //Toggle context switch for SRT
         return pdTRUE;
     }
 
@@ -379,42 +381,6 @@ BaseType_t xIsSwitchRequired(void)
         return pdFALSE;
     }
 }
-
-/*
-void dump_HRT_task_list(TimelineControlBlock_t *timeLine)
-{
-    for (uint32_t i = 0; i < timeLine->ulHrtCount; i++) {
-        
-        static char val_buffer[11];
-        
-        UART_printf(" TASK [");
-        UART_printf(utoa(i, val_buffer, 10));
-        UART_printf("] Start: ");
-        UART_printf(utoa(timeLine->pxHrtTable[i].ulStartTick, val_buffer, 10));
-        UART_printf("| End: ");
-        UART_printf(utoa(timeLine->pxHrtTable[i].ulEndTick, val_buffer, 10));
-        UART_printf("| Duration:");
-        UART_printf(utoa(timeLine->pxHrtTable[i].ulDuration, val_buffer, 10));
-        UART_printf("| Handle:");
-        UART_printf(utoa(timeLine->pxHrtTable[i].xTaskHandle, val_buffer, 16));
-        UART_printf("\n");
-    }
-}
-
-void dump_SRT_task_list(TimelineControlBlock_t *timeLine)
-{
-    for (uint32_t i = 0; i <  timeLine->ulSrtCount; i++) {
-        
-        static char val_buffer[11];
-        
-        UART_printf(" TASK [");
-        UART_printf(utoa(i, val_buffer, 10));
-        UART_printf("] Handle:");
-        UART_printf(utoa(timeLine->pxSrtTable[i].xTaskHandle, val_buffer, 16));
-        UART_printf("\n");
-    }
-}*/
-
 
 TaskHandle_t xTimelineGetSwitchIn()
 {
@@ -435,7 +401,7 @@ TaskHandle_t xTimelineGetSwitchIn()
         return xReadyHRTTask->xTaskHandle;
         
     }
-    else if(xRunningHRTTask != NULL){ // HRT is RUNNING //TODO Probably useless condition. Called just in context switch and if the task is running and did not miss the deadline this row is pointless
+    else if(xRunningHRTTask != NULL){ // HRT is RUNNING
         
         return xRunningHRTTask->xTaskHandle;
     }
@@ -464,7 +430,6 @@ TaskHandle_t xTimelineGetSwitchIn()
     }
 }
 
-
 void vNotifySrtCompletion(void){
 
     SRTEntry_t* xCurrentSrt = &xTimeline.pxSrtTable[xTimeline.ulCurrentSrtIndex];
@@ -474,4 +439,24 @@ void vNotifySrtCompletion(void){
     xTimeline.ulCurrentSrtIndex += 1;
     
     portYIELD();
+}
+
+/* --- CPU UTILIZATION LOGIC --- */
+void vCalculateAndResetCPUUtilization(void) {
+    if (xTimeline.ulMajorFrameTicks == 0) {
+        return;
+    }
+
+    /* Calculate busy ticks */
+    uint32_t ulBusyTicks = xTimeline.ulMajorFrameTicks - ulIdleTicksCount;
+    
+    /* Calculate percentage */
+    uint32_t ulCpuUtilization = (ulBusyTicks * 100) / xTimeline.ulMajorFrameTicks;
+
+#if (TEST == 1)
+    trace_cpu_utilization(ulCpuUtilization);
+#endif
+
+    /* Reset the counter for the next Major Frame */
+    ulIdleTicksCount = 0;
 }
